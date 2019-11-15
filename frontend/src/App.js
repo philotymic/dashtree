@@ -16,6 +16,21 @@ class TopicSubscriberI extends Topics.TopicSubscriber {
     }
 };
 
+function getBackendProxyString()
+{
+    return new Promise((resolve, reject) => {
+	// this function is defined in python
+	getBackendPort("hello from js", (port) => {
+	    if (port) {
+		let proxy_s = `topics:ws -h localhost -p ${port}`;
+		resolve(proxy_s);
+	    } else {
+		reject("getBackendPort returns null/undef");
+	    }
+	});
+    });
+}
+
 class App extends React.Component {
     constructor (props) {
 	super(props);
@@ -31,9 +46,14 @@ class App extends React.Component {
     }
     
     componentDidMount() {
-	window.ic.createObjectAdapter("").then((adapter) => {
+	let backend_proxy_s = null;
+	getBackendProxyString().then((backend_proxy_s_) => {
+	    backend_proxy_s = backend_proxy_s_;
+	    return window.ic.createObjectAdapter("");
+	}).then((adapter) => {
 	    this.adapter = adapter;
-	    let o_prx = window.ic.stringToProxy("topics:ws -h localhost -p 12345");
+	    console.log("backend_proxy_s:", backend_proxy_s);
+	    let o_prx = window.ic.stringToProxy(backend_proxy_s); //"topics:ws -h localhost -p 12345");
 	    return Topics.TopicsSubscriptionsPrx.checkedCast(o_prx);
 	}).then((prx) => {
 	    this.center_proxy = prx;
