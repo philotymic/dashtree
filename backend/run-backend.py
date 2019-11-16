@@ -2,9 +2,11 @@
 # python run-tests.py test-publish    -- publisher
 # python run-tests.py test-subscriber -- subscriber
 #
-import Ice, sys
+import Ice, sys, os
+import prctl, signal
 
-Ice.loadSlice("--all -I{ICE_SLICE_DIR} ./backend.ice".format(ICE_SLICE_DIR = Ice.getSliceDir()))
+print "environ:", os.environ
+Ice.loadSlice("--all -I{ICE_SLICE_DIR} {top}/backend/backend.ice".format(ICE_SLICE_DIR = Ice.getSliceDir(), top = os.environ['topdir']))
 import Topics
 
 class TopicSubscriptionsI(Topics.TopicsSubscriptions):
@@ -40,8 +42,8 @@ class TopicSubscriptionsI(Topics.TopicsSubscriptions):
         self.subscribers.append(bidir_prx)
         
 if __name__ == "__main__":
-    port = 12345
-
+    prctl.set_pdeathsig(signal.SIGTERM) # if parent dies this child will get SIGTERM
+    
     props = Ice.createProperties()
     props.setProperty("Ice.ThreadPool.Server.Size", "2")
     props.setProperty("Ice.ACM.Close", "0")
@@ -53,9 +55,21 @@ if __name__ == "__main__":
     init_data.properties = props
 
     with Ice.initialize(sys.argv, init_data) as communicator:
+        xfn_fn = sys.argv[1]
         # server
+        port = 0
+        adapter = communicator.createObjectAdapterWithEndpoints("", "ws -p {port}".format(port = port))
+        endpoints = adapter.getEndpoints()
+        ep_s = endpoints[0].toString()
+        print ep_s
+        port = int(ep_s.split(" ")[2])
         print "running server at port", port
-        adapter = communicator.createObjectAdapterWithEndpoints("", "ws -p %d" % port)
+        xfn_fd = open(xfn_fn, "w+b")
+        print >>xfn_fd, port
+        xfn_fd.close()
+        print "port assigned"
+        sys.stdout.flush()
+
         adapter.add(TopicSubscriptionsI(), Ice.stringToIdentity("topics"))
         adapter.activate()
         communicator.waitForShutdown()
