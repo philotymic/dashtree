@@ -5,7 +5,9 @@
 import Ice, sys, os
 import prctl, signal
 
-print "environ:", os.environ
+if not 'topdir' in os.environ:
+    raise Exception("no topdir specified in env")
+
 Ice.loadSlice("--all -I{ICE_SLICE_DIR} {top}/backend/backend.ice".format(ICE_SLICE_DIR = Ice.getSliceDir(), top = os.environ['topdir']))
 import Topics
 
@@ -42,6 +44,8 @@ class TopicSubscriptionsI(Topics.TopicsSubscriptions):
         self.subscribers.append(bidir_prx)
         
 if __name__ == "__main__":
+    # https://github.com/seveas/python-prctl -- prctl wrapper module
+    # more on pdeathsignal: https://stackoverflow.com/questions/284325/how-to-make-child-process-die-after-parent-exits
     prctl.set_pdeathsig(signal.SIGTERM) # if parent dies this child will get SIGTERM
     
     props = Ice.createProperties()

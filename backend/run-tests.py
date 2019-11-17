@@ -9,11 +9,11 @@ class TopicSubscriberI(Topics.TopicSubscriber):
 
 if __name__ == "__main__":
     test_type = sys.argv[1]
+    port = int(sys.argv[2])
     
     with Ice.initialize() as communicator:
         if test_type == "test-publisher":
             # round-robin test publisher
-            port = 12345
             o_prx = communicator.stringToProxy("topics:ws -h localhost -p %d" % port)
             prx = Topics.TopicsSubscriptionsPrx.checkedCast(o_prx)
             test_topics = ["/a", "/a/b", "/b", "/b/c/d"]

@@ -1,6 +1,4 @@
 import React from 'react';
-
-import './gen-js/all-mods.js';
 let Topics = window.Topics;
 
 class TopicSubscriberI extends Topics.TopicSubscriber {
@@ -15,21 +13,6 @@ class TopicSubscriberI extends Topics.TopicSubscriber {
 	//this.app_obj.setState({columns: this.columns, tableColumnExtensions: this.tableColumnExtensions, rows: rows});
     }
 };
-
-function getBackendProxyString()
-{
-    return new Promise((resolve, reject) => {
-	// this function is defined in python
-	getBackendPort("hello from js", (port) => {
-	    if (port) {
-		let proxy_s = `topics:ws -h localhost -p ${port}`;
-		resolve(proxy_s);
-	    } else {
-		reject("getBackendPort returns null/undef");
-	    }
-	});
-    });
-}
 
 class App extends React.Component {
     constructor (props) {
