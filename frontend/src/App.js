@@ -69,13 +69,13 @@ class App extends React.PureComponent {
     
     componentDidMount() {
 	let backend_proxy_s = null;
-	getBackendProxyString().then((backend_proxy_s_) => {
-	    backend_proxy_s = backend_proxy_s_;
+	getBackendPort().then((backend_port) => {
+	    backend_proxy_s = `topics:ws -h localhost -p ${backend_port}`;
 	    return window.ic.createObjectAdapter("");
 	}).then((adapter) => {
 	    this.adapter = adapter;
 	    console.log("backend_proxy_s:", backend_proxy_s);
-	    let o_prx = window.ic.stringToProxy(backend_proxy_s); //"topics:ws -h localhost -p 12345");
+	    let o_prx = window.ic.stringToProxy(backend_proxy_s);
 	    return Topics.TopicsSubscriptionsPrx.checkedCast(o_prx);
 	}).then((prx) => {
 	    this.center_proxy = prx;
