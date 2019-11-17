@@ -16,7 +16,7 @@ if __name__ == "__main__":
             # round-robin test publisher
             o_prx = communicator.stringToProxy("topics:ws -h localhost -p %d" % port)
             prx = Topics.TopicsSubscriptionsPrx.checkedCast(o_prx)
-            test_topics = ["/a", "/a/b", "/b", "/b/c/d"]
+            test_topics = ["/a", "/a/b", "/b", "/b/d"]
             test_topic_states = ["NONE|", "OK|ok", "ERR|system failure"]
             while 1:
                 for test_topic in test_topics:
