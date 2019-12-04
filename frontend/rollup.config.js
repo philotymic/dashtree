@@ -21,7 +21,7 @@ export default {
 	resolve(), // tells Rollup how to find date-fns in node_modules
 	commonjs({
 	    namedExports: {		
-		'node_modules/react-is/index.js': ['ForwardRef'],
+		'node_modules/react-is/index.js': ['ForwardRef', 'isFragment'],
 		'node_modules/react/index.js': ['createContext', 'createElement', 'Children', 'PureComponent', 'Component', 'createRef', 'Fragment', 'isValidElement', 'cloneElement'],
 		'node_modules/react-dom/index.js': ['unstable_batchedUpdates', 'findDOMNode'],
 		'node_modules/prop-types/index.js': ['shape', 'instanceOf', 'node', 'object', 'string', 'func', 'bool', 'oneOfType', 'number', 'arrayOf', 'oneOf', 'any', 'elementType'],
