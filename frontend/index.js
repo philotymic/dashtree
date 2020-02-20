@@ -1,5 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './src/App.js';
+import {connectToBackend} from 'libdipole-js';
+import App from './App.js';
 
-ReactDOM.render(<App/>, document.getElementById('root'));
+connectToBackend().then((ws_handler) => {
+    ReactDOM.render(<App/>, document.getElementById('root'));
+});

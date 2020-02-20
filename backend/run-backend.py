@@ -2,81 +2,59 @@
 # python run-tests.py test-publish    -- publisher
 # python run-tests.py test-subscriber -- subscriber
 #
-import Ice, sys, os
+#import ipdb
+import sys, os, asyncio
 import prctl, signal
 
-if not 'topdir' in os.environ:
-    raise Exception("no topdir specified in env")
+import websockets
+sys.path.append(os.path.join(os.environ['dipole_topdir'], "src"))
+import libdipole
+import libdipole.autoport
 
-Ice.loadSlice("--all -I{ICE_SLICE_DIR} {top}/backend/backend.ice".format(ICE_SLICE_DIR = Ice.getSliceDir(), top = os.environ['topdir']))
-import Topics
-
-class TopicSubscriptionsI(Topics.TopicsSubscriptions):
+@libdipole.interface
+class TopicSubscriptions:
+    def getTopicPathes(self): pass
+    def getTopicState(self, topic_path): pass
+    def publish(self, topic_path, topic_state): pass
+    def subscribe(self, subscriber_id): pass
+    
+class TopicSubscriptions(TopicSubscriptions)
     def __init__(self):
         self.topics = {} # topic -> text
         self.subscribers = [] # proxies to TopicSubsriber objects
         
-    def getTopicPathes(self, curr = None):
+    def getTopicPathes(self):
         return self.topics.keys()
 
-    def getTopicState(self, topic_path, curr = None):
+    def getTopicState(self, topic_path):
         return self.topics[topic_path] if topic_path in self.topics else None
 
-    def publish(self, topic_path, topic_state, curr = None):
-        print "TopicSubscriptionsI::publish:", topic_path, topic_state, len(self.subscribers)
+    def publish(self, topic_path, topic_state):
+        print("TopicSubscriptionsI::publish:", topic_path, topic_state, len(self.subscribers))
         self.topics[topic_path] = topic_state
         for subscriber in self.subscribers[:]:
-            try:
-                subscriber.onTopicStateChange(topic_path, topic_state)
-            except Ice.Exception as ex:
-                print "ice exception:", ex
-                self.subscribers.remove(subscriber)
-                print "len of subscriber:", len(self.subscribers)
+            subscriber.onTopicStateChange(topic_path, topic_state)
 
-    def subscribeViaProxy(self, subscriber_prx, curr = None):
-        print "TopicsSubscriptionsI::subscribeViaProxy:", subscriber_prx
-        self.subscribers.append(subscriber_prx)
-
-    def subscribeViaIdentity(self, subscriber_id, curr = None):
-        print "TopicsSubscriptionsI::subscribeViaIdentity:", subscriber_id
-        #subscriber_ice_identity = Ice.Identity(name = subscriber_id)
-        bidir_prx = Topics.TopicSubscriberPrx.uncheckedCast(curr.con.createProxy(subscriber_id))
-        self.subscribers.append(bidir_prx)
+    def subscribe(self, subscriber_id):
+        print("TopicsSubscriptionsI::subscribe:", subscriber_id)
+        self.subscribers.append(subscriber_id)
         
 if __name__ == "__main__":
     # https://github.com/seveas/python-prctl -- prctl wrapper module
     # more on pdeathsignal: https://stackoverflow.com/questions/284325/how-to-make-child-process-die-after-parent-exits
     prctl.set_pdeathsig(signal.SIGTERM) # if parent dies this child will get SIGTERM
     
-    props = Ice.createProperties()
-    props.setProperty("Ice.ThreadPool.Server.Size", "2")
-    props.setProperty("Ice.ACM.Close", "0")
-    props.setProperty("Ice.MessageSizeMax", "0")
-    #props.setProperty("Ice.Trace.Protocol", "1")
-    #props.setProperty("Ice.Trace.Network", "3")
+    xfn_fn = sys.argv[1]
 
-    init_data = Ice.InitializationData()
-    init_data.properties = props
+    ws_handler = libdipole.WSHandler();
+    print("adding object topic_subscriptions")
+    ws_handler.object_server.add_object("topics", TopicSubscriptions())
 
-    with Ice.initialize(sys.argv, init_data) as communicator:
-        xfn_fn = sys.argv[1]
-        # server
-        port = 0
-        adapter = communicator.createObjectAdapterWithEndpoints("", "ws -p {port}".format(port = port))
-        endpoints = adapter.getEndpoints()
-        ep_s = endpoints[0].toString()
-        print ep_s
-        port = int(ep_s.split(" ")[2])
-        print "running server at port", port
-        xfn_fd = open(xfn_fn, "w+b")
-        print >>xfn_fd, port
-        xfn_fd.close()
-        print "port assigned"
-        sys.stdout.flush()
+    ws_l = websockets.serve(ws_handler.message_loop, 'localhost', 0)
+    asyncio.get_event_loop().run_until_complete(ws_l)
+    assigned_port = libdipole.autoport.find_ws_port(ws_l)
+    libdipole.__save_assigned_port(assigned_port, xfn)
+    asyncio.get_event_loop().run_forever()
 
-        adapter.add(TopicSubscriptionsI(), Ice.stringToIdentity("topics"))
-        adapter.activate()
-        communicator.waitForShutdown()
-        
         
 
