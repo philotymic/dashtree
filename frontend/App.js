@@ -10,10 +10,15 @@ import {
   TableHeaderRow,
   TableTreeColumn,
 } from '@devexpress/dx-react-grid-material-ui';
+import * as backend from './gen-js/backend.js';
 
-let Topics = window.Topics;
+function generateQuickGuid() {
+    return Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+}
 
-class TopicSubscriberI extends Topics.TopicSubscriber {
+
+class TopicSubscriberI extends backend.TopicSubscriber {
     constructor (app_obj) {
 	super();
 	this.app_obj = app_obj;
@@ -68,25 +73,11 @@ class App extends React.PureComponent {
     }
     
     componentDidMount() {
-	let backend_proxy_s = null;
-	getBackendPort().then((backend_port) => {
-	    backend_proxy_s = `topics:ws -h localhost -p ${backend_port}`;
-	    return window.ic.createObjectAdapter("");
-	}).then((adapter) => {
-	    this.adapter = adapter;
-	    console.log("backend_proxy_s:", backend_proxy_s);
-	    let o_prx = window.ic.stringToProxy(backend_proxy_s);
-	    return Topics.TopicsSubscriptionsPrx.checkedCast(o_prx);
-	}).then((prx) => {
-	    this.center_proxy = prx;
-	    this.connection = this.center_proxy.ice_getCachedConnection();
-	    this.connection.setAdapter(this.adapter);
-	}).then(() => {
-	    let subscriber_o_prx = this.adapter.addWithUUID(new TopicSubscriberI(this));
-	    return this.center_proxy.subscribeViaIdentity(subscriber_o_prx.ice_getIdentity());
-	}).then(() => {
-	    console.log("subscription is all set");
-	});
+	let center_prx = new backend.TopicsSubscriptionsPrx(this.props.ws_handler, "topics");
+	let subscriber_o = new TopicSubscriberI(this);
+	let o_id = generateQuickGuid();
+	this.props.ws_handler.object_server.add_object(o_id, subscriber_o);
+	center_prx.subscribe(o_id).then(() => console.log("subscription is all set"));
     }
 
     update_row(row_key, row_value) {
