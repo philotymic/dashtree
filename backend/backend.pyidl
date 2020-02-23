@@ -1,0 +1,10 @@
+class TopicsSubscriptions:
+    def getTopicPathes(self): pass
+    def getTopicState(self, topicPath): pass
+
+    def publish(self, topicPath, newTopicState): pass
+    @pass_calling_context
+    def subscribe(self, subsriber_obj_id): pass
+
+class TopicSubscriber:
+    def onTopicStateChange(topicPath, newTopicState): pass
